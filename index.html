@@ -310,7 +310,7 @@ code { background: var(--bg); padding: 1px 6px; border-radius: 4px; font-size: 1
   <!-- 사이드바 -->
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="church-name" id="sb-church-name">킹스턴한인교회</div>
+      <div class="church-name" id="sb-church-name">트리니티 장로교회</div>
       <div class="year" id="sb-year">2026 주소록</div>
     </div>
     <nav class="sidebar-nav">
@@ -424,7 +424,7 @@ code { background: var(--bg); padding: 1px 6px; border-radius: 4px; font-size: 1
           <div class="form-grid">
             <div class="form-group">
               <label>교회 이름</label>
-              <input type="text" id="church-name" value="킹스턴한인교회" oninput="updateChurchInfo()">
+              <input type="text" id="church-name" value="트리니티 장로교회" oninput="updateChurchInfo()">
             </div>
             <div class="form-group">
               <label>연도</label>
@@ -684,7 +684,7 @@ function updateChurchInfo() {
 
 // ── 미리보기 ──
 function renderPreview() {
-  const churchName = document.getElementById('church-name').value || '킹스턴한인교회';
+  const churchName = document.getElementById('church-name').value || '트리니티 장로교회';
   const year = document.getElementById('church-year').value || '2026';
   const sortBy = document.getElementById('sort-order').value;
   const showPhoto    = document.getElementById('show-photo').checked;
