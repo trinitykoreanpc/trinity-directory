@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>교인 주소록</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ── 변수 ── */
+:root {
+  --bg: #f7f6f2;
+  --surface: #ffffff;
+  --border: #e2e0d8;
+  --border2: #ccc9be;
+  --text: #1a1917;
+  --text2: #6b6860;
+  --text3: #a09d94;
+  --accent: #2c4a2e;
+  --accent-light: #e8f0e8;
+  --red: #8b2020;
+  --red-light: #fdf0f0;
+  --radius: 10px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.07);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+/* ── 리셋 ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+button { cursor: pointer; font-family: inherit; }
+input, select, textarea { font-family: inherit; }
+
+/* ── 레이아웃 ── */
+.app { display: flex; min-height: 100vh; }
+
+/* ── 사이드바 ── */
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  background: var(--accent);
+  display: flex; flex-direction: column;
+  padding: 0;
+  position: fixed; top: 0; left: 0; bottom: 0;
+  z-index: 10;
+}
+.sidebar-logo {
+  padding: 28px 20px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+.sidebar-logo .church-name {
+  font-family: 'Noto Serif KR', serif;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.sidebar-logo .year {
+  color: rgba(255,255,255,0.5);
+  font-size: 12px;
+  margin-top: 2px;
+}
+.sidebar-nav { padding: 16px 12px; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: rgba(255,255,255,0.65);
+  font-size: 13.5px;
+  border: none; background: none;
+  width: 100%; text-align: left;
+  transition: all 0.15s;
+  margin-bottom: 2px;
+}
+.nav-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.nav-item.active { background: rgba(255,255,255,0.18); color: #fff; font-weight: 500; }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+}
+.api-status {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  display: flex; align-items: center; gap: 6px;
+}
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #888; flex-shrink: 0;
+}
+.status-dot.ok { background: #6fcf6f; }
+.status-dot.err { background: #e07070; }
+
+/* ── 메인 ── */
+.main { margin-left: 220px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+/* ── 탑바 ── */
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 5;
+}
+.page-title { font-size: 16px; font-weight: 500; }
+.topbar-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ── 버튼 ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; font-size: 13px; border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--surface); color: var(--text);
+  transition: all 0.15s; white-space: nowrap;
+}
+.btn:hover { background: var(--bg); border-color: var(--border2); }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.primary:hover { background: #1e3620; }
+.btn.danger { color: var(--red); border-color: #e0b0b0; }
+.btn.danger:hover { background: var(--red-light); }
+.btn.sm { padding: 5px 10px; font-size: 12px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── 컨텐츠 ── */
+.content { padding: 28px; flex: 1; }
+
+/* ── 검색/툴바 ── */
+.toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.search-wrap { position: relative; flex: 1; max-width: 320px; }
+.search-wrap input {
+  width: 100%; padding: 9px 12px 9px 36px;
+  border: 1px solid var(--border2); border-radius: 8px;
+  background: var(--surface); font-size: 13px; color: var(--text);
+}
+.search-wrap input:focus { outline: none; border-color: var(--accent); }
+.search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--text3); pointer-events: none; }
+.count-tag {
+  background: var(--accent-light); color: var(--accent);
+  border: 1px solid #c0d4c0;
+  border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 500;
+}
+
+/* ── 테이블 ── */
+.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+thead th {
+  padding: 11px 14px; text-align: left;
+  background: #f9f8f5; color: var(--text2);
+  font-size: 12px; font-weight: 500;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: #fafaf7; }
+.member-name { font-weight: 500; }
+.role-tag {
+  display: inline-block; padding: 2px 9px; border-radius: 20px;
+  font-size: 11.5px; font-weight: 500; white-space: nowrap;
+}
+.role-목사        { background: #dce8fc; color: #1a4c99; }
+.role-장로        { background: #dff0d4; color: #2d5e0e; }
+.role-안수집사    { background: #fef3d4; color: #7a5a0a; }
+.role-집사        { background: #fdefd4; color: #7a440a; }
+.role-권사        { background: #fce0ec; color: #8c2545; }
+.role-협동권사    { background: #fce8f0; color: #8c2550; }
+.role-협동안수집사 { background: #ece9fd; color: #4535a8; }
+.role-성도        { background: #f0ede4; color: #56534e; }
+.role-청년        { background: #e4f0f0; color: #1a6060; }
+.role-청소년      { background: #e4eef8; color: #1a4070; }
+.role-어린이      { background: #fef4e4; color: #7a5a0a; }
+.status-출석       { }
+.status-타지역     { background: #fff3cd; color: #856404; border-radius:20px; padding:2px 8px; font-size:11px; }
+.status-장기결석   { background: #f8d7da; color: #842029; border-radius:20px; padding:2px 8px; font-size:11px; }
+.actions { display: flex; gap: 6px; }
+.empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+/* ── 모달 ── */
+.backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 100;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.backdrop.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border-radius: 14px;
+  width: 520px; max-width: 95vw; max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.2s ease;
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+.modal-header {
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-header h3 { font-size: 16px; font-weight: 600; }
+.modal-body { padding: 20px 22px; }
+.modal-footer {
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 8px;
+}
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-group label { font-size: 12px; font-weight: 500; color: var(--text2); }
+.form-group input, .form-group select {
+  padding: 9px 11px; font-size: 13px;
+  border: 1px solid var(--border2); border-radius: 8px;
+  background: var(--surface); color: var(--text);
+  transition: border-color 0.15s;
+}
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+
+/* ── 설정 패널 ── */
+.settings-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px;
+  margin-bottom: 16px; box-shadow: var(--shadow);
+}
+.settings-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+.setting-row { display: flex; align-items: center; gap: 10px; font-size: 13.5px; margin-bottom: 8px; }
+.setting-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+.api-input {
+  width: 100%; padding: 10px 12px; font-size: 12.5px;
+  border: 1px solid var(--border2); border-radius: 8px;
+  background: var(--bg); color: var(--text);
+  font-family: 'Courier New', monospace; margin-top: 8px;
+}
+.api-input:focus { outline: none; border-color: var(--accent); }
+.help-text { font-size: 12px; color: var(--text3); line-height: 1.7; margin-top: 6px; }
+code { background: var(--bg); padding: 1px 6px; border-radius: 4px; font-size: 11.5px; }
+
+/* ── 미리보기 ── */
+.preview-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 32px;
+  box-shadow: var(--shadow);
+}
+.preview-doc-title {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 28px; font-weight: 700;
+  text-align: center; margin-bottom: 6px;
+}
+.preview-doc-sub { text-align: center; font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+.preview-hr { border: none; border-top: 2px solid var(--text); margin-bottom: 24px; }
+.preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.preview-card {
+  border: 1px solid var(--border);
+  border-radius: 9px; padding: 13px;
+  display: flex; gap: 11px; align-items: flex-start;
+  break-inside: avoid;
+}
+.preview-photo {
+  width: 62px; height: 62px; border-radius: 8px;
+  object-fit: cover; flex-shrink: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text3);
+  border: 1px solid var(--border);
+}
+.preview-photo img { width: 62px; height: 62px; border-radius: 8px; object-fit: cover; }
+.preview-info { flex: 1; min-width: 0; }
+.preview-name-row { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+.preview-name-row span { font-size: 12px; font-weight: 400; color: var(--text2); margin-left: 5px; }
+.preview-divider { border: none; border-top: 1px solid var(--border); margin: 5px 0 6px; }
+.preview-detail { font-size: 11.5px; color: var(--text2); line-height: 1.8; }
+.preview-detail b { color: var(--text); font-weight: 500; }
+
+/* ── 로딩 ── */
+.loading-bar {
+  height: 3px; background: var(--accent);
+  position: fixed; top: 0; left: 0; z-index: 999;
+  transition: width 0.3s;
+}
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--accent); color: #fff;
+  padding: 12px 18px; border-radius: 10px;
+  font-size: 13px; z-index: 200;
+  box-shadow: var(--shadow-lg);
+  animation: fadeIn 0.2s ease;
+  display: none;
+}
+.toast.err { background: var(--red); }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ── 반응형 ── */
+@media (max-width: 700px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-group.full { grid-column: 1; }
+  .preview-grid { grid-template-columns: 1fr; }
+}
+
+/* ── 인쇄 ── */
+@media print {
+  .sidebar, .topbar, .toolbar, .no-print { display: none !important; }
+  .main { margin-left: 0; }
+  .content { padding: 0; }
+  .preview-wrap { box-shadow: none; border: none; padding: 0; }
+  .preview-card { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<div id="loading-bar" class="loading-bar" style="width:0"></div>
+<div id="toast" class="toast"></div>
+
+<div class="app">
+  <!-- 사이드바 -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="church-name" id="sb-church-name">트리니티 장로교회 KM</div>
+      <div class="year" id="sb-year">2026 주소록</div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showPage('list')" id="nav-list">
+        <span class="nav-icon">👥</span> 교인 목록
+      </button>
+      <button class="nav-item" onclick="showPage('preview')" id="nav-preview">
+        <span class="nav-icon">📄</span> 주소록 보기
+      </button>
+      <button class="nav-item" onclick="showPage('settings')" id="nav-settings">
+        <span class="nav-icon">⚙️</span> 설정
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="api-status">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">연결 확인 중...</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 메인 -->
+  <main class="main">
+
+    <!-- ── 교인 목록 페이지 ── -->
+    <div id="page-list">
+      <div class="topbar">
+        <div class="page-title">교인 목록</div>
+        <div class="topbar-actions">
+          <button class="btn primary" onclick="openModal()">＋ 교인 추가</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="toolbar">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" placeholder="이름, 주소 검색..." id="search-input" oninput="renderTable()">
+          </div>
+          <span class="count-tag" id="count-tag">0명</span>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button class="btn sm" onclick="importCSV()">📥 CSV 가져오기</button>
+            <button class="btn sm" onclick="exportCSV()">📤 CSV 내보내기</button>
+            <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="handleCSVImport(event)">
+          <select id="status-filter" onchange="renderTable()" style="padding:7px 10px;font-size:13px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);">
+            <option value="출석 중">출석 교인만</option>
+            <option value="all">모두 보기</option>
+          </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>이름</th><th>직분</th><th>상태</th><th>생년월일</th><th>전화번호</th><th>주소</th><th style="width:90px">관리</th>
+              </tr>
+            </thead>
+            <tbody id="member-tbody"></tbody>
+          </table>
+          <div id="empty-msg" class="empty" style="display:none">
+            <div class="empty-icon">👥</div>
+            <div>교인 정보가 없습니다.</div>
+            <div style="margin-top:8px;font-size:13px;">위의 "교인 추가" 버튼을 눌러 추가하거나<br>설정에서 Google Sheets API URL을 입력하세요.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 주소록 미리보기 페이지 ── -->
+    <div id="page-preview" style="display:none">
+      <div class="topbar">
+        <div class="page-title">주소록 미리보기</div>
+        <div class="topbar-actions no-print">
+          <select id="sort-order" onchange="renderPreview()" style="padding:7px 10px;font-size:13px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);">
+            <option value="role">직분순</option>
+            <option value="name">이름순</option>
+          </select>
+          <select id="preview-status-filter" onchange="renderPreview()" style="padding:7px 10px;font-size:13px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);">
+            <option value="출석 중">출석 교인만</option>
+            <option value="all">모두 보기</option>
+          </select>
+          <button class="btn primary" onclick="window.print()">🖨 PDF 인쇄</button>
+        </div>
+      </div>
+      <div class="content">
+        <div id="preview-container"></div>
+      </div>
+    </div>
+
+    <!-- ── 설정 페이지 ── -->
+    <div id="page-settings" style="display:none">
+      <div class="topbar">
+        <div class="page-title">설정</div>
+      </div>
+      <div class="content">
+
+        <div class="settings-card">
+          <h3>🔗 Google Sheets 연결</h3>
+          <div class="help-text">
+            Google Apps Script를 배포한 후 나오는 <b>웹 앱 URL</b>을 붙여넣으세요.<br>
+            설정 방법: Apps Script → 배포 → 새 배포 → 웹 앱 → 실행: 나 / 액세스: 모든 사용자
+          </div>
+          <input type="text" class="api-input" id="api-url" placeholder="https://script.google.com/macros/s/xxxxxx/exec">
+          <div style="margin-top:10px;display:flex;gap:8px;">
+            <button class="btn primary" onclick="saveApiUrl()">저장 및 연결 테스트</button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h3>📋 주소록 표시 항목</h3>
+          <div class="setting-row"><input type="checkbox" id="show-photo" checked onchange="renderPreview()"> <label for="show-photo">사진 표시</label></div>
+          <div class="setting-row"><input type="checkbox" id="show-birthday" checked onchange="renderPreview()"> <label for="show-birthday">생년월일 표시</label></div>
+          <div class="setting-row"><input type="checkbox" id="show-phone" checked onchange="renderPreview()"> <label for="show-phone">전화번호 표시</label></div>
+          <div class="setting-row"><input type="checkbox" id="show-address" checked onchange="renderPreview()"> <label for="show-address">주소 표시</label></div>
+          <div class="setting-row"><input type="checkbox" id="show-email" onchange="renderPreview()"> <label for="show-email">이메일 표시</label></div>
+        </div>
+
+        <div class="settings-card">
+          <h3>🏛 교회 정보</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>교회 이름</label>
+              <input type="text" id="church-name" value="트리니티 장로교회 KM" oninput="updateChurchInfo()">
+            </div>
+            <div class="form-group">
+              <label>연도</label>
+              <input type="text" id="church-year" value="2026" oninput="updateChurchInfo()">
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h3>📑 CSV 형식 안내</h3>
+          <div class="help-text">
+            CSV 열 순서: <code>이름, 직분, 생년월일, 전화번호, 주소, 이메일, 사진URL</code><br>
+            직분: 목사 / 장로 / 집사 / 협동권사 / 협동안수집사 / 성도<br>
+            생년월일 예시: <code>1958-05-01</code> 또는 <code>19580501</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── 교인 추가/수정 모달 ── -->
+<div class="backdrop" id="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">교인 추가</h3>
+      <button class="btn sm" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>이름 *</label>
+          <input type="text" id="f-name" placeholder="홍길동">
+        </div>
+        <div class="form-group">
+          <label>직분</label>
+          <select id="f-role">
+            <option value="성도">성도</option>
+            <option value="집사">집사</option>
+            <option value="안수집사">안수집사</option>
+            <option value="권사">권사</option>
+            <option value="협동권사">협동권사</option>
+            <option value="협동안수집사">협동안수집사</option>
+            <option value="장로">장로</option>
+            <option value="목사">목사</option>
+            <option value="청년">청년</option>
+            <option value="청소년">청소년</option>
+            <option value="어린이">어린이</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>상태</label>
+          <select id="f-status">
+            <option value="출석 중">출석 중</option>
+            <option value="한국 체류">한국 체류</option>
+            <option value="타 지역 체류">타 지역 체류</option>
+            <option value="장기결석">장기결석</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>생년월일</label>
+          <input type="text" id="f-birthday" placeholder="1958-05-01">
+        </div>
+        <div class="form-group">
+          <label>전화번호</label>
+          <input type="text" id="f-phone" placeholder="613-555-0123">
+        </div>
+        <div class="form-group full">
+          <label>주소</label>
+          <input type="text" id="f-address" placeholder="184 County 8, Napanee">
+        </div>
+        <div class="form-group full">
+          <label>이메일</label>
+          <input type="text" id="f-email" placeholder="example@email.com">
+        </div>
+        <div class="form-group full">
+          <label>사진</label>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div id="photo-preview-box" style="width:64px;height:64px;border-radius:8px;border:1px solid var(--border2);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3);overflow:hidden;flex-shrink:0;">No Photo</div>
+              <div style="flex:1;">
+                <input type="file" id="f-photo-file" accept="image/*" onchange="previewAndUploadPhoto(this)" style="font-size:12px;width:100%;">
+                <div id="photo-upload-status" style="font-size:11px;color:var(--text3);margin-top:4px;"></div>
+              </div>
+            </div>
+            <input type="text" id="f-photo" placeholder="사진 URL (자동 입력되거나 직접 입력)" style="font-size:12px;">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>카드 내 순서 <span style="font-weight:400;color:var(--text3)">(같은 주소 내 표시 순서, 숫자가 작을수록 앞)</span></label>
+          <input type="number" id="f-order" placeholder="1" min="1">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn primary" id="save-btn" onclick="saveMember()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 상태 ──
+let members = [];
+let editingId = null;
+const SHEETS_API_KEY = 'AIzaSyAKk0SXueDWtLDMQBVrMY1xjN3R-MXIIpA';
+const SHEETS_ID = '1twn8e1Kf1k_QDdkb2KPKOQD4tEJAYoQPlLsMZ8E4uIw';
+const SHEET_NAME = 'Trinity Korean PC';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyg99QBIC9x1sUj2PL8UF0qaeZnx4WY04crQG6QhdHUnHkSTBz4bDj0v_MEFAV9IRliXw/exec';
+
+// ── 초기화 ──
+window.onload = () => {
+  document.getElementById('api-url').value = APPS_SCRIPT_URL;
+  const cn = localStorage.getItem('church_name');
+  const cy = localStorage.getItem('church_year');
+  if (cn) document.getElementById('church-name').value = cn;
+  if (cy) document.getElementById('church-year').value = cy;
+  updateChurchInfo();
+  loadMembers();
+};
+
+// ── 유틸 ──
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function setStatus(ok, msg) {
+  document.getElementById('status-dot').className = 'status-dot ' + (ok ? 'ok' : 'err');
+  document.getElementById('status-text').textContent = msg;
+}
+function showToast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast' + (isErr ? ' err' : '');
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+function loading(on) {
+  document.getElementById('loading-bar').style.width = on ? '70%' : '100%';
+  setTimeout(() => { if (!on) document.getElementById('loading-bar').style.width = '0'; }, 300);
+}
+
+// ── 페이지 전환 ──
+function showPage(p) {
+  ['list','preview','settings'].forEach(x => {
+    document.getElementById('page-'+x).style.display = x===p ? 'block' : 'none';
+    document.getElementById('nav-'+x).classList.toggle('active', x===p);
+  });
+  if (p === 'preview') renderPreview();
+}
+
+// ── Google Sheets API 직접 호출 ──
+let sheetsHeaders = [];
+let sheetsData = [];
+
+function formatDate(val) {
+  if (!val) return '';
+  const s = String(val);
+  if (s.match(/^\d{4}-\d{2}-\d{2}/)) return s.substring(0, 10);
+  // Date serial number from Sheets
+  if (s.match(/^\d+$/)) {
+    const date = new Date((parseInt(s) - 25569) * 86400 * 1000);
+    return date.toISOString().substring(0, 10);
+  }
+  return s;
+}
+
+async function apiCall(action, data) {
+  loading(true);
+  try {
+    if (action === 'getAll') {
+      return await sheetsGetAll();
+    } else if (action === 'update') {
+      return await sheetsUpdate(data);
+    } else if (action === 'add') {
+      return await sheetsAdd(data);
+    } else if (action === 'delete') {
+      return await sheetsDelete(data.id);
+    }
+  } catch(e) {
+    loading(false);
+    showToast('오류: ' + e.message, true);
+    setStatus(false, '연결 실패');
+    return null;
+  }
+}
+
+async function sheetsGetAll() {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${encodeURIComponent(SHEET_NAME)}?key=${SHEETS_API_KEY}`;
+  const res = await fetch(url);
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message);
+  const rows = json.values || [];
+  if (rows.length < 2) { loading(false); return { members: [] }; }
+  sheetsHeaders = rows[0].map(h => String(h).trim());
+  sheetsData = rows;
+  const members = rows.slice(1).map(row => {
+    const obj = {};
+    sheetsHeaders.forEach((h, i) => {
+      const val = row[i] || '';
+      obj[h] = h === '생년월일' ? formatDate(val) : val;
+    });
+    return obj;
+  }).filter(m => m['이름'] && m['이름'].trim());
+  loading(false);
+  return { members };
+}
+
+async function sheetsUpdate(data) {
+  // Apps Script로 update 요청 (write 권한 필요)
+  const res = await fetch(APPS_SCRIPT_URL + '?action=update&payload=' + encodeURIComponent(JSON.stringify(data)));
+  const text = await res.text();
+  try {
+    const json = JSON.parse(text);
+    loading(false);
+    return json;
+  } catch(e) {
+    loading(false);
+    return { error: text };
+  }
+}
+
+async function sheetsAdd(data) {
+  const res = await fetch(APPS_SCRIPT_URL + '?action=add&payload=' + encodeURIComponent(JSON.stringify(data)));
+  const text = await res.text();
+  try {
+    const json = JSON.parse(text);
+    loading(false);
+    return json;
+  } catch(e) {
+    loading(false);
+    return { error: text };
+  }
+}
+
+async function sheetsDelete(id) {
+  const res = await fetch(APPS_SCRIPT_URL + '?action=delete&payload=' + encodeURIComponent(JSON.stringify({id})));
+  const text = await res.text();
+  try {
+    const json = JSON.parse(text);
+    loading(false);
+    return json;
+  } catch(e) {
+    loading(false);
+    return { error: text };
+  }
+}
+
+// ── 데이터 로드 ──
+async function loadMembers() {
+  setStatus(false, '연결 중...');
+  const res = await apiCall('getAll');
+  if (!res) return;
+  if (res.error) { setStatus(false, '오류: ' + res.error); showToast(res.error, true); return; }
+  members = res.members || [];
+  setStatus(true, `연결됨 (${members.length}명)`);
+  renderTable();
+}
+
+// ── 생년월일 정리 (T05:00:00.000Z 같은 시간대 제거) ──
+function cleanBirthday(val) {
+  if (!val) return '';
+  // ISO datetime 형식이면 날짜 부분만 추출
+  const m = String(val).match(/^(\d{4}-\d{2}-\d{2})/);
+  if (m) return m[1];
+  return val;
+}
+
+// ── 테이블 렌더 ──
+function getRoleOrder(r) { return {목사:0,장로:1,안수집사:2,협동안수집사:3,권사:4,협동권사:5,집사:6,성도:7,청년:8,청소년:9,어린이:10}[r]??99; }
+
+function renderTable() {
+  const q = (document.getElementById('search-input').value||'').toLowerCase();
+  const statusFilter = document.getElementById('status-filter')?.value || '출석';
+  const filtered = members.filter(m => {
+    const matchQ = (m['이름']||'').toLowerCase().includes(q) || (m['주소']||'').toLowerCase().includes(q);
+    const matchS = statusFilter === 'all' || (m['상태']||'출석 중') === statusFilter;
+    return matchQ && matchS;
+  });
+  document.getElementById('count-tag').textContent = members.length + '명';
+  const tbody = document.getElementById('member-tbody');
+  tbody.innerHTML = '';
+  document.getElementById('empty-msg').style.display = filtered.length ? 'none' : 'block';
+  filtered.forEach(m => {
+    const role = m['직분'] || '성도';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="member-name">${m['이름']||''}</td>
+      <td><span class="role-tag role-${role}">${role}</span></td>
+      <td>${(m['상태']&&m['상태']!=='출석') ? `<span class="role-tag" style="background:${m['상태']==='장기결석'?'#f8d7da':'#fff3cd'};color:${m['상태']==='장기결석'?'#842029':'#856404'}">${m['상태']}</span>` : ''}</td>
+      <td>${cleanBirthday(m['생년월일'])||'-'}</td>
+      <td>${m['전화번호']||'-'}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m['주소']||'-'}</td>
+      <td><div class="actions">
+        <button class="btn sm" onclick="editMember('${m['id']||m['id']}')" >✏️</button>
+        <button class="btn sm danger" onclick="deleteMember('${m['id']}')">🗑</button>
+      </div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── 모달 ──
+function openModal(id) {
+  editingId = id || null;
+  document.getElementById('modal-title').textContent = id ? '교인 수정' : '교인 추가';
+  const m = id ? members.find(x => String(x['id']) === String(id)) : {};
+  document.getElementById('f-name').value    = m?.['이름'] || '';
+  document.getElementById('f-role').value    = m?.['직분'] || '성도';
+  document.getElementById('f-status').value  = m?.['상태'] || '출석 중';
+  document.getElementById('f-birthday').value = cleanBirthday(m?.['생년월일']) || '';
+  document.getElementById('f-phone').value   = m?.['전화번호'] || '';
+  document.getElementById('f-address').value = m?.['주소'] || '';
+  document.getElementById('f-email').value   = m?.['이메일'] || '';
+  document.getElementById('f-photo').value   = m?.['사진URL'] || '';
+  document.getElementById('f-photo-file').value = '';
+  document.getElementById('photo-upload-status').textContent = '';
+  const pbox = document.getElementById('photo-preview-box');
+  const purl = m?.['사진URL'] || '';
+  if (purl) {
+    pbox.innerHTML = `<img src="${purl}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;" onerror="this.parentElement.textContent='No Photo'">`;
+  } else {
+    pbox.textContent = 'No Photo';
+  }
+  document.getElementById('f-order').value   = m?.['순서'] || '';
+  document.getElementById('modal-backdrop').classList.add('open');
+  setTimeout(() => document.getElementById('f-name').focus(), 100);
+}
+function closeModal() { document.getElementById('modal-backdrop').classList.remove('open'); }
+
+async function saveMember() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('이름을 입력해주세요.'); return; }
+  const data = {
+    id: editingId || uid(),
+    '이름': name,
+    '직분': document.getElementById('f-role').value,
+    '상태': document.getElementById('f-status').value,
+    '생년월일': document.getElementById('f-birthday').value.trim(),
+    '전화번호': document.getElementById('f-phone').value.trim(),
+    '주소': document.getElementById('f-address').value.trim(),
+    '이메일': document.getElementById('f-email').value.trim(),
+    '사진URL': document.getElementById('f-photo').value.trim(),
+    '순서': document.getElementById('f-order').value.trim()
+  };
+  document.getElementById('save-btn').disabled = true;
+  const action = editingId ? 'update' : 'add';
+  const res = await apiCall(action, data);
+  document.getElementById('save-btn').disabled = false;
+  if (!res || res.error) { showToast(res?.error || '저장 실패', true); return; }
+  showToast(editingId ? '수정되었습니다.' : '추가되었습니다.');
+  closeModal();
+  await loadMembers();
+}
+
+function editMember(id) { openModal(id); }
+
+async function deleteMember(id) {
+  const m = members.find(x => x['id'] === id);
+  if (!confirm(`"${m?.['이름']}"을(를) 삭제하시겠습니까?`)) return;
+  const res = await apiCall('delete', { id });
+  if (!res || res.error) { showToast(res?.error || '삭제 실패', true); return; }
+  showToast('삭제되었습니다.');
+  await loadMembers();
+}
+
+// ── 설정 저장 ──
+async function saveApiUrl() {
+  showToast('연결 테스트 중...');
+  await loadMembers();
+}
+
+function updateChurchInfo() {
+  const cn = document.getElementById('church-name').value;
+  const cy = document.getElementById('church-year').value;
+  localStorage.setItem('church_name', cn);
+  localStorage.setItem('church_year', cy);
+  document.getElementById('sb-church-name').textContent = cn;
+  document.getElementById('sb-year').textContent = cy + ' 주소록';
+}
+
+// ── 미리보기 ──
+function photoUrl(m) {
+  let url = m['사진URL'] || '';
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) url = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w120`;
+  return url;
+}
+
+function memberCard(m, showPhoto, showBirthday, showPhone, showAddress, showEmail) {
+  const role = m['직분'] || '성도';
+  const purl = photoUrl(m);
+  const photoHtml = showPhoto
+    ? (purl
+        ? `<img src="${purl}" class="preview-photo" onerror="this.outerHTML='<div class=\\'preview-photo\\'>No Photo</div>'">`
+        : `<div class="preview-photo">No Photo</div>`)
+    : '';
+  let details = '';
+  if (showBirthday && m['생년월일']) details += `<div><b>생년월일:</b> ${cleanBirthday(m['생년월일'])}</div>`;
+  if (showPhone    && m['전화번호']) details += `<div><b>전화번호:</b> ${m['전화번호']}</div>`;
+  if (showAddress  && m['주소'])    details += `<div><b>주소:</b> ${m['주소']}</div>`;
+  if (showEmail    && m['이메일'])  details += `<div><b>이메일:</b> ${m['이메일']}</div>`;
+  return `<div style="display:flex;gap:10px;align-items:flex-start;flex:1;min-width:0;">
+    ${photoHtml}
+    <div class="preview-info">
+      <div class="preview-name-row">${m['이름']||''}<span>${role}</span></div>
+      <div class="preview-divider"></div>
+      <div class="preview-detail">${details || '<span style="color:var(--text3)">정보 없음</span>'}</div>
+    </div>
+  </div>`;
+}
+
+function groupByAddress(sorted) {
+  // 같은 주소끼리 묶기 (주소 없는 사람은 단독 카드)
+  const groups = [];
+  const used = new Set();
+  // 순서 필드 기준으로 먼저 정렬
+  sorted.sort((a, b) => {
+    const oa = parseInt(a['순서']) || 999;
+    const ob = parseInt(b['순서']) || 999;
+    return oa - ob;
+  });
+  sorted.forEach((m, i) => {
+    if (used.has(i)) return;
+    const addr = (m['주소'] || '').trim();
+    if (!addr) { groups.push([m]); used.add(i); return; }
+    const group = [m];
+    used.add(i);
+    for (let j = i + 1; j < sorted.length; j++) {
+      if (used.has(j)) continue;
+      if ((sorted[j]['주소'] || '').trim() === addr) {
+        group.push(sorted[j]);
+        used.add(j);
+      }
+    }
+    groups.push(group);
+  });
+  return groups;
+}
+
+function renderPreview() {
+  const churchName = document.getElementById('church-name').value || '트리니티 장로교회 KM';
+  const year = document.getElementById('church-year').value || '2026';
+  const sortBy = document.getElementById('sort-order').value;
+  const showPhoto    = document.getElementById('show-photo').checked;
+  const showBirthday = document.getElementById('show-birthday').checked;
+  const showPhone    = document.getElementById('show-phone').checked;
+  const showAddress  = document.getElementById('show-address').checked;
+  const showEmail    = document.getElementById('show-email').checked;
+
+  const previewStatusFilter = document.getElementById('preview-status-filter')?.value || '출석 중';
+  let sorted = members.filter(m => previewStatusFilter === 'all' || (m['상태']||'출석') === previewStatusFilter);
+  if (sortBy === 'name') sorted.sort((a,b) => (a['이름']||'').localeCompare(b['이름']||'','ko'));
+  else sorted.sort((a,b) => getRoleOrder(a['직분']) - getRoleOrder(b['직분']) || (a['이름']||'').localeCompare(b['이름']||'','ko'));
+
+  const groups = groupByAddress(sorted);
+
+  const cards = groups.map(group => {
+    if (group.length === 1) {
+      // 단독 카드
+      return `<div class="preview-card">${memberCard(group[0], showPhoto, showBirthday, showPhone, showAddress, showEmail)}</div>`;
+    } else {
+      // 부부/동거 카드 — 세로로 두 명 나란히, 중간에 구분선
+      const inner = group.map((m, i) =>
+        `${i > 0 ? '<div style="border-top:1px dashed var(--border);margin:8px 0;"></div>' : ''}
+         ${memberCard(m, showPhoto, showBirthday, showPhone, showAddress, showEmail)}`
+      ).join('');
+      return `<div class="preview-card" style="flex-direction:column;">${inner}</div>`;
+    }
+  }).join('');
+
+  document.getElementById('preview-container').innerHTML = `
+    <div class="preview-wrap">
+      <div class="preview-doc-title">${year} ${churchName} 주소록</div>
+      <div class="preview-doc-sub">총 ${sorted.length}명</div>
+      <hr class="preview-hr">
+      ${sorted.length ? `<div class="preview-grid">${cards}</div>` : `<div class="empty">교인 정보가 없습니다.</div>`}
+    </div>`;
+}
+
+// ── CSV ──
+function importCSV() { document.getElementById('csv-file').click(); }
+function handleCSVImport(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    const lines = ev.target.result.split('\n').filter(l => l.trim());
+    let added = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (i === 0 && line.toLowerCase().includes('이름')) continue;
+      const parts = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+      if (!parts[0]) continue;
+      const data = {
+        id: uid(), '이름': parts[0], '직분': parts[1]||'성도',
+        '생년월일': parts[2]||'', '전화번호': parts[3]||'',
+        '주소': parts[4]||'', '이메일': parts[5]||'', '사진URL': parts[6]||''
+      };
+      const res = await apiCall('add', data);
+      if (res && !res.error) added++;
+    }
+    showToast(`${added}명 추가 완료`);
+    await loadMembers();
+  };
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+}
+
+function exportCSV() {
+  const header = '이름,직분,상태,생년월일,전화번호,주소,이메일,사진URL\n';
+  const rows = members.map(m =>
+    [m['이름'],m['직분'],m['상태']||'출석',m['생년월일'],m['전화번호'],m['주소'],m['이메일'],m['사진URL']]
+    .map(v => `"${v||''}"`).join(',')
+  ).join('\n');
+  const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '교인주소록.csv';
+  a.click();
+}
+
+
+// ── 사진 미리보기 & Google Drive 업로드 ──
+async function previewAndUploadPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('photo-upload-status');
+  const previewBox = document.getElementById('photo-preview-box');
+
+  // 미리보기
+  const reader = new FileReader();
+  reader.onload = e => {
+    previewBox.innerHTML = `<img src="${e.target.result}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;">`;
+  };
+  reader.readAsDataURL(file);
+
+  // Google Drive 업로드
+  statusEl.textContent = '⏳ 업로드 중...';
+  statusEl.style.color = 'var(--text3)';
+
+  try {
+    const base64 = await fileToBase64(file);
+    const fileName = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const res = await fetch(APPS_SCRIPT_URL + '?action=uploadPhoto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'uploadPhoto', base64, fileName, mimeType: file.type })
+    });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    document.getElementById('f-photo').value = json.url;
+    statusEl.textContent = '✅ 업로드 완료';
+    statusEl.style.color = 'var(--accent)';
+  } catch(e) {
+    statusEl.textContent = '❌ 업로드 실패: ' + e.message;
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      // data:image/jpeg;base64,XXX -> XXX 부분만
+      resolve(e.target.result.split(',')[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// 모달 바깥 클릭 닫기
+document.getElementById('modal-backdrop').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+</script>
+</body>
+</html>
